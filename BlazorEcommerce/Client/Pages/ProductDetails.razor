@@ -1,4 +1,5 @@
 ﻿@page "/product/{id:int}";
+@using Microsoft.IdentityModel.Tokens
 @inject IProductService ProductService;
 
 @if (product == null)
@@ -14,9 +15,30 @@ else
 		<div class="media-body">
 			<h2 class="mb-0">@product.Title</h2>
 			<p>@product.Description</p>
-			<h4 class="price">
-				@*$@product.Price*@
-			</h4>
+			@if (product.Variants != null && product.Variants.Count > 1)
+			{
+				<div class="mb-3">
+					<select class="form-select" @bind="_currentTypeId">
+						@foreach (var v in product.Variants)
+						{
+							<option value="@v.ProductTypeId">@v.ProductType.Name</option>
+						}
+					</select>
+				</div>
+			}
+			@if (GetSelectedVariant() != null)
+			{
+				@if (GetSelectedVariant().OriginalPrice > GetSelectedVariant().Price)
+				{
+					<h6 class="text-muted original-price">
+						$@GetSelectedVariant().OriginalPrice
+					</h6>
+				}
+				<h4 class="price">
+					$@GetSelectedVariant().Price
+				</h4>
+			}
+			
 		</div>
 	</div>
 	@*<span>@ProductService.Products[0]</span>*@
@@ -24,6 +46,7 @@ else
 
 @code {
 	private Product? product = null;
+	private int _currentTypeId = 1;
 
 	[Parameter]
 	public int Id { get; set; }
@@ -41,8 +64,17 @@ else
 		else
 		{
 			product = result.Data;
+			if (product.Variants.Count > 0)
+			{
+				_currentTypeId = product.Variants[0].ProductTypeId;
+			}
 		}
-
-		
 	}
+
+	private ProductVariant GetSelectedVariant()
+	{
+		var variant = product.Variants.FirstOrDefault(v => v.ProductTypeId == _currentTypeId);
+		return variant;
+	}
+
 }
