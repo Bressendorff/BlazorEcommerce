@@ -10,14 +10,21 @@
 		}
 
 		public string Message { get; set; } = "Loading products";
+		public int CurrentPage { get; set; } = 1;
+		public int PageCount { get; set; } = 0;
+		public string LastSearchText { get; set; } = string.Empty;
 
 		public async Task GetProducts(string? categoryUrl = null)
 		{
 			var result = categoryUrl == null ?
-				await _http.GetFromJsonAsync<ServiceResponse<List<Product>>>("api/Product") :
+				await _http.GetFromJsonAsync<ServiceResponse<List<Product>>>("api/Product/featured") :
 				await _http.GetFromJsonAsync<ServiceResponse<List<Product>>>($"api/Product/category/{categoryUrl}");
 			if (result != null && result.Data != null) Products = result.Data;
 
+			CurrentPage = 1;
+			PageCount = 0;
+
+			if (Products.Count == 0) Message = "No Products Found";
 			ProductsChanged.Invoke();
 		}
 
@@ -28,13 +35,16 @@
             return result;
         }
 
-		public async Task SearchProducts(string searchText)
+		public async Task SearchProducts(string searchText, int page)
 		{
+			LastSearchText = searchText;
 			var result =
-				await _http.GetFromJsonAsync<ServiceResponse<List<Product>>>($"api/Product/search/{searchText}");
+				await _http.GetFromJsonAsync<ServiceResponse<ProductSearchResultDTO>>($"api/Product/search/{searchText}/{page}");
 			if (result != null && result.Data != null)
 			{
-				Products = result.Data;
+				Products = result.Data.Products;
+				CurrentPage = result.Data.CurrentPage;
+				PageCount = result.Data.Pages;
 			}
 
 			if (Products.Count == 0)
